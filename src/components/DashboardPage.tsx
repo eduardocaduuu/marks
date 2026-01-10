@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ProcessingResult, SectorSummary, ResellerAnalysis } from '../types';
 import { SectorDetailsModal } from './SectorDetailsModal';
-import { generateSectorSummaryCSV } from '../lib/aggregate';
-import { downloadCSV } from '../lib/fileParser';
+import { downloadExcel } from '../lib/fileParser';
 
 interface DashboardPageProps {
   result: ProcessingResult;
@@ -53,8 +52,18 @@ export function DashboardPage({ result, onGoToUpload, onGoToAudit }: DashboardPa
   };
 
   const handleExportSummary = () => {
-    const csv = generateSectorSummaryCSV(filteredSummaries);
-    downloadCSV(csv, 'resumo_por_setor.csv');
+    const headers = ['Setor', 'Ativos', 'Multimarca', '% Multimarca', 'Mono-marca', '% Mono-marca', 'Sem marca', '% Sem marca'];
+    const rows = filteredSummaries.map(s => [
+      s.setor,
+      s.totalAtivos,
+      s.multimarca,
+      Number(s.percentMultimarca.toFixed(2)),
+      s.monomarca,
+      Number(s.percentMonomarca.toFixed(2)),
+      s.semMarca,
+      Number(s.percentSemMarca.toFixed(2))
+    ]);
+    downloadExcel(headers, rows, 'resumo_por_setor.xlsx');
   };
 
   const getSortIcon = (column: keyof SectorSummary) => {
@@ -155,7 +164,7 @@ export function DashboardPage({ result, onGoToUpload, onGoToAudit }: DashboardPa
               className="search-input"
             />
             <button className="btn-export" onClick={handleExportSummary}>
-              Exportar CSV
+              Exportar Excel
             </button>
           </div>
         </div>

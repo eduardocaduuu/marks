@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { AuditData, ResellerAnalysis } from '../types';
-import { generateResellerDetailsCSV } from '../lib/aggregate';
-import { downloadCSV } from '../lib/fileParser';
+import { downloadExcel } from '../lib/fileParser';
 
 interface AuditPageProps {
   audit: AuditData;
@@ -57,8 +56,15 @@ export function AuditPage({ audit, onGoToDashboard, onGoToUpload }: AuditPagePro
   };
 
   const handleExportSemMarca = () => {
-    const csv = generateResellerDetailsCSV(filteredSemMarca);
-    downloadCSV(csv, `sem_marca_ciclo_${audit.cicloSelecionado}.csv`);
+    const headers = ['Código', 'Nome', 'Código Normalizado', 'Nome Normalizado', 'Setor'];
+    const rows = filteredSemMarca.map(r => [
+      r.codigoRevendedora,
+      r.nomeRevendedora,
+      r.codigoNormalizado,
+      r.nomeNormalizado,
+      r.setor
+    ]);
+    downloadExcel(headers, rows, `sem_marca_ciclo_${audit.cicloSelecionado}.xlsx`);
   };
 
   const getSortIcon = (column: 'nome' | 'codigo' | 'setor') => {
@@ -205,7 +211,7 @@ export function AuditPage({ audit, onGoToDashboard, onGoToUpload }: AuditPagePro
               className="search-input"
             />
             <button className="btn-export" onClick={handleExportSemMarca}>
-              Exportar CSV
+              Exportar Excel
             </button>
           </div>
 

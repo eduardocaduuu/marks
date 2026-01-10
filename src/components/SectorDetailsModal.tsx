@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ResellerAnalysis } from '../types';
-import { generateResellerDetailsCSV } from '../lib/aggregate';
-import { downloadCSV } from '../lib/fileParser';
+import { downloadExcel } from '../lib/fileParser';
 
 interface SectorDetailsModalProps {
   isOpen: boolean;
@@ -70,8 +69,16 @@ export function SectorDetailsModal({
   };
 
   const handleExport = () => {
-    const csv = generateResellerDetailsCSV(filteredResellers);
-    downloadCSV(csv, `detalhes_${setor.replace(/\s+/g, '_')}.csv`);
+    const headers = ['Código', 'Nome', 'Setor', 'Qtd Marcas', 'Marcas', 'Classificação'];
+    const rows = filteredResellers.map(r => [
+      r.codigoRevendedora,
+      r.nomeRevendedora,
+      r.setor,
+      r.brandCount,
+      r.brandsPurchased.join('; '),
+      r.classification
+    ]);
+    downloadExcel(headers, rows, `detalhes_${setor.replace(/\s+/g, '_')}.xlsx`);
   };
 
   const getBadgeClass = (classification: string) => {
@@ -147,7 +154,7 @@ export function SectorDetailsModal({
             </div>
 
             <button className="btn-export" onClick={handleExport}>
-              Exportar CSV
+              Exportar Excel
             </button>
           </div>
 

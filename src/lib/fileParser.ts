@@ -72,3 +72,31 @@ export function downloadCSV(content: string, filename: string): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Faz download de um arquivo Excel (.xlsx)
+ */
+export function downloadExcel(headers: string[], rows: (string | number)[][], filename: string): void {
+  // Cria dados com headers
+  const data = [headers, ...rows];
+
+  // Cria worksheet
+  const worksheet = XLSX.utils.aoa_to_sheet(data);
+
+  // Ajusta largura das colunas
+  const colWidths = headers.map((header, i) => {
+    const maxLength = Math.max(
+      header.length,
+      ...rows.map(row => String(row[i] || '').length)
+    );
+    return { wch: Math.min(maxLength + 2, 50) };
+  });
+  worksheet['!cols'] = colWidths;
+
+  // Cria workbook
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Dados');
+
+  // Gera arquivo e faz download
+  XLSX.writeFile(workbook, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
+}
