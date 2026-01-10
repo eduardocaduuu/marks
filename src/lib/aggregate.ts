@@ -24,6 +24,9 @@ import {
 /**
  * Extrai revendedores ativos da planilha Geral para um ou mais ciclos
  * Se ciclo === 'TODOS', considera todas as linhas
+ *
+ * REGRA: Deduplicação por CÓDIGO. Se código vazio, usa NOME.
+ * Chave única: "C:{codigo}" ou "N:{nome}" para evitar colisões.
  */
 export function extractActiveResellers(
   data: RawRow[],
@@ -49,10 +52,16 @@ export function extractActiveResellers(
     const codigoNormalizado = normalizeCodigo(codigoRaw);
     const nomeNormalizado = normalizeNome(nomeRaw);
 
-    // Usa código normalizado como chave primária
-    const key = codigoNormalizado || nomeNormalizado;
-
-    if (!key) continue;
+    // Chave única com prefixo para evitar colisões entre código e nome
+    // Se tem código, usa código. Senão, usa nome.
+    let key: string;
+    if (codigoNormalizado) {
+      key = `C:${codigoNormalizado}`;
+    } else if (nomeNormalizado) {
+      key = `N:${nomeNormalizado}`;
+    } else {
+      continue; // Sem código nem nome, ignora
+    }
 
     // Deduplicação: mantém primeira ocorrência
     if (!activeMap.has(key)) {
@@ -218,28 +227,38 @@ export function processData(
     let wasMatched = false;
     let matchType: 'codigo' | 'nome' | null = null;
 
+    // Determina se este revendedor tem código (se não tiver, usaremos fallback por nome)
+    const temCodigo = !!reseller.codigoNormalizado;
+
     for (const brand of BRAND_NAMES) {
       const purchases = brandPurchases[brand];
+      let foundBrand = false;
 
-      // Primeiro tenta match por código (já filtrado para existir na Geral)
-      if (reseller.codigoNormalizado && purchases.byCodigo.has(reseller.codigoNormalizado)) {
-        brandsPurchased.push(brand);
-        totalPorMarca[brand]++;
-        if (!wasMatched) {
-          matchedByCodigo++;
-          matchType = 'codigo';
-          wasMatched = true;
+      if (temCodigo) {
+        // Se TEM código, usa APENAS código para matching (sem fallback por nome)
+        if (purchases.byCodigo.has(reseller.codigoNormalizado)) {
+          foundBrand = true;
+          if (!wasMatched) {
+            matchedByCodigo++;
+            matchType = 'codigo';
+            wasMatched = true;
+          }
+        }
+      } else {
+        // Se NÃO tem código, usa nome para matching
+        if (reseller.nomeNormalizado && purchases.byNome.has(reseller.nomeNormalizado)) {
+          foundBrand = true;
+          if (!wasMatched) {
+            matchedByNome++;
+            matchType = 'nome';
+            wasMatched = true;
+          }
         }
       }
-      // Fallback: match por nome (já filtrado para existir na Geral)
-      else if (reseller.nomeNormalizado && purchases.byNome.has(reseller.nomeNormalizado)) {
+
+      if (foundBrand) {
         brandsPurchased.push(brand);
         totalPorMarca[brand]++;
-        if (!wasMatched) {
-          matchedByNome++;
-          matchType = 'nome';
-          wasMatched = true;
-        }
       }
     }
 
