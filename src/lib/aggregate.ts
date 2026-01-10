@@ -123,6 +123,8 @@ export function extractBrandPurchases(
 
 /**
  * Processa todos os dados e gera resultado de análise
+ * REGRA CRÍTICA: A planilha Geral é a ÚNICA fonte de verdade para ATIVOS.
+ * Revendedores das marcas que NÃO existem na Geral são IGNORADOS.
  */
 export function processData(
   geralData: RawRow[],
@@ -132,7 +134,7 @@ export function processData(
 ): ProcessingResult {
   const errors: string[] = [];
 
-  // 1. Extrair ativos da planilha Geral
+  // 1. Extrair ativos EXCLUSIVAMENTE da planilha Geral
   const activeResellers = extractActiveResellers(geralData, geralMapping, ciclo);
 
   if (activeResellers.size === 0) {
@@ -153,19 +155,51 @@ export function processData(
     };
   }
 
-  // 2. Extrair compras de cada marca
+  // 2. Criar Sets de códigos e nomes válidos da Geral para validação
+  const validCodigos = new Set<string>();
+  const validNomes = new Set<string>();
+
+  for (const [, reseller] of activeResellers) {
+    if (reseller.codigoNormalizado) {
+      validCodigos.add(reseller.codigoNormalizado);
+    }
+    if (reseller.nomeNormalizado) {
+      validNomes.add(reseller.nomeNormalizado);
+    }
+  }
+
+  // 3. Extrair compras de cada marca (filtrando apenas revendedores válidos da Geral)
   const brandPurchases: Record<BrandName, { byCodigo: Set<string>; byNome: Set<string> }> = {} as Record<BrandName, { byCodigo: Set<string>; byNome: Set<string> }>;
 
   for (const brand of BRAND_NAMES) {
     const bd = brandData[brand];
     if (bd && bd.data.length > 0 && bd.mapping) {
-      brandPurchases[brand] = extractBrandPurchases(bd.data, bd.mapping, ciclo);
+      // Extrai compras e filtra apenas os que existem na Geral
+      const rawPurchases = extractBrandPurchases(bd.data, bd.mapping, ciclo);
+
+      // Filtra códigos: mantém apenas os que existem na Geral
+      const filteredCodigos = new Set<string>();
+      for (const codigo of rawPurchases.byCodigo) {
+        if (validCodigos.has(codigo)) {
+          filteredCodigos.add(codigo);
+        }
+      }
+
+      // Filtra nomes: mantém apenas os que existem na Geral
+      const filteredNomes = new Set<string>();
+      for (const nome of rawPurchases.byNome) {
+        if (validNomes.has(nome)) {
+          filteredNomes.add(nome);
+        }
+      }
+
+      brandPurchases[brand] = { byCodigo: filteredCodigos, byNome: filteredNomes };
     } else {
       brandPurchases[brand] = { byCodigo: new Set(), byNome: new Set() };
     }
   }
 
-  // 3. Analisar cada revendedor ativo
+  // 4. Analisar cada revendedor ativo (APENAS os da Geral)
   const resellers: ResellerAnalysis[] = [];
   let matchedByCodigo = 0;
   let matchedByNome = 0;
@@ -178,6 +212,7 @@ export function processData(
     'QDB': 0
   };
 
+  // Itera APENAS sobre os revendedores da planilha Geral
   for (const [, reseller] of activeResellers) {
     const brandsPurchased: BrandName[] = [];
     let wasMatched = false;
@@ -186,7 +221,7 @@ export function processData(
     for (const brand of BRAND_NAMES) {
       const purchases = brandPurchases[brand];
 
-      // Primeiro tenta match por código
+      // Primeiro tenta match por código (já filtrado para existir na Geral)
       if (reseller.codigoNormalizado && purchases.byCodigo.has(reseller.codigoNormalizado)) {
         brandsPurchased.push(brand);
         totalPorMarca[brand]++;
@@ -196,7 +231,7 @@ export function processData(
           wasMatched = true;
         }
       }
-      // Fallback: match por nome
+      // Fallback: match por nome (já filtrado para existir na Geral)
       else if (reseller.nomeNormalizado && purchases.byNome.has(reseller.nomeNormalizado)) {
         brandsPurchased.push(brand);
         totalPorMarca[brand]++;
