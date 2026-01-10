@@ -70,9 +70,8 @@ export function useAppState() {
       if (isGeral && mapping) {
         const extractedCycles = extractCycles(data, mapping as unknown as ColumnMapping);
         setCycles(extractedCycles);
-        if (extractedCycles.length > 0) {
-          setSelectedCycle(extractedCycles[0]);
-        }
+        // Seleciona "TODOS" como padrão
+        setSelectedCycle('TODOS');
       }
 
       // Se mapeamento falhou, abre modal

@@ -288,6 +288,16 @@ body {
   border-color: var(--accent-primary);
 }
 
+.cycle-info {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid var(--accent-primary);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
 /* Warning/Error Boxes */
 .warning-box,
 .error-box {

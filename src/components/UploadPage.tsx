@@ -99,11 +99,17 @@ export function UploadPage({
               value={selectedCycle}
               onChange={(e) => onCycleChange(e.target.value)}
             >
+              <option value="TODOS">Todos os ciclos ({cycles.length})</option>
               {cycles.map(cycle => (
                 <option key={cycle} value={cycle}>{cycle}</option>
               ))}
             </select>
           </div>
+          {selectedCycle === 'TODOS' && (
+            <p className="cycle-info">
+              Analisando todos os {cycles.length} ciclos: {cycles.join(', ')}
+            </p>
+          )}
         </div>
       )}
 

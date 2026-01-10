@@ -22,7 +22,8 @@ import {
 } from './normalize';
 
 /**
- * Extrai revendedores ativos da planilha Geral para um ciclo específico
+ * Extrai revendedores ativos da planilha Geral para um ou mais ciclos
+ * Se ciclo === 'TODOS', considera todas as linhas
  */
 export function extractActiveResellers(
   data: RawRow[],
@@ -30,12 +31,14 @@ export function extractActiveResellers(
   ciclo: string
 ): Map<string, ActiveReseller> {
   const activeMap = new Map<string, ActiveReseller>();
-  const cicloNormalizado = normalizeCiclo(ciclo);
+  const isTodos = ciclo === 'TODOS';
+  const cicloNormalizado = isTodos ? '' : normalizeCiclo(ciclo);
 
   for (const row of data) {
     const rowCiclo = normalizeCiclo(row[mapping.cicloFaturamento!]);
 
-    if (rowCiclo !== cicloNormalizado) {
+    // Se não é "TODOS", filtra pelo ciclo específico
+    if (!isTodos && rowCiclo !== cicloNormalizado) {
       continue;
     }
 
@@ -59,7 +62,7 @@ export function extractActiveResellers(
         nomeRevendedora: String(nomeRaw ?? '').trim(),
         nomeNormalizado,
         setor: String(setorRaw ?? 'Sem Setor').trim(),
-        cicloFaturamento: cicloNormalizado
+        cicloFaturamento: rowCiclo
       });
     }
   }
@@ -68,7 +71,8 @@ export function extractActiveResellers(
 }
 
 /**
- * Extrai compras de uma marca para um ciclo específico
+ * Extrai compras de uma marca para um ou mais ciclos
+ * Se ciclo === 'TODOS', considera todas as linhas com Tipo=Venda
  * Retorna Set de códigos/nomes normalizados que compraram (Tipo=Venda)
  */
 export function extractBrandPurchases(
@@ -79,18 +83,19 @@ export function extractBrandPurchases(
   const byCodigo = new Set<string>();
   const byNome = new Set<string>();
 
-  const cicloNormalizado = normalizeCiclo(ciclo);
+  const isTodos = ciclo === 'TODOS';
+  const cicloNormalizado = isTodos ? '' : normalizeCiclo(ciclo);
 
   for (const row of data) {
     // Determina coluna de ciclo (CicloFaturamento ou fallback CicloCaptacao)
     const cicloColumn = mapping.cicloFaturamento || mapping.cicloCaptacao;
 
-    if (!cicloColumn) continue;
-
-    const rowCiclo = normalizeCiclo(row[cicloColumn]);
-
-    if (rowCiclo !== cicloNormalizado) {
-      continue;
+    // Se não é "TODOS", filtra pelo ciclo
+    if (!isTodos && cicloColumn) {
+      const rowCiclo = normalizeCiclo(row[cicloColumn]);
+      if (rowCiclo !== cicloNormalizado) {
+        continue;
+      }
     }
 
     // Verifica Tipo = Venda
