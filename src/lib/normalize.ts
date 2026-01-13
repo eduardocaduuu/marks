@@ -128,6 +128,7 @@ export function autoMapColumns(
 ): { mapping: Record<string, string> | null; unmapped: string[] } {
   const mapping: Record<string, string> = {};
   const unmapped: string[] = [];
+  const usedColumns = new Set<string>();
 
   const normalizedColumns = columns.map(c => ({
     original: c,
@@ -148,8 +149,14 @@ export function autoMapColumns(
     let found = false;
 
     for (const col of normalizedColumns) {
+      // Pula colunas já mapeadas para outros campos
+      if (usedColumns.has(col.original)) {
+        continue;
+      }
+
       if (variations.some(v => col.normalized.includes(v) || v.includes(col.normalized))) {
         mapping[field] = col.original;
+        usedColumns.add(col.original);
         found = true;
         break;
       }
@@ -165,8 +172,14 @@ export function autoMapColumns(
     const variations = COLUMN_VARIATIONS[field as keyof typeof COLUMN_VARIATIONS];
 
     for (const col of normalizedColumns) {
+      // Pula colunas já mapeadas para outros campos
+      if (usedColumns.has(col.original)) {
+        continue;
+      }
+
       if (variations.some(v => col.normalized.includes(v) || v.includes(col.normalized))) {
         mapping[field] = col.original;
+        usedColumns.add(col.original);
         break;
       }
     }
