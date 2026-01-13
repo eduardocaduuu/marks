@@ -91,3 +91,10 @@ export interface ProcessingResult {
   success: boolean;
   errors: string[];
 }
+
+export interface GeralOnlyResult {
+  resellers: ActiveReseller[];
+  sectorSummaries: { setor: string; total: number }[];
+  cicloSelecionado: string;
+  totalAtivos: number;
+}

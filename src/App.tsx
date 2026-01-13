@@ -2,6 +2,7 @@ import { useAppState } from './hooks/useAppState';
 import { UploadPage } from './components/UploadPage';
 import { DashboardPage } from './components/DashboardPage';
 import { AuditPage } from './components/AuditPage';
+import { GeralDashboardPage } from './components/GeralDashboardPage';
 import './App.css';
 
 function App() {
@@ -11,6 +12,9 @@ function App() {
     selectedCycle,
     setSelectedCycle,
     processingResult,
+    geralOnlyResult,
+    analysisMode,
+    setAnalysisMode,
     isProcessing,
     currentView,
     setCurrentView,
@@ -21,9 +25,11 @@ function App() {
     handleFileUpload,
     handleManualMapping,
     processAllData,
+    processGeralOnlyData,
     clearFile,
     resetAll,
-    canProcess
+    canProcess,
+    canProcessGeralOnly
   } = useAppState();
 
   return (
@@ -37,8 +43,12 @@ function App() {
           onFileUpload={handleFileUpload}
           onClearFile={clearFile}
           onProcess={processAllData}
+          onProcessGeralOnly={processGeralOnlyData}
           canProcess={canProcess}
+          canProcessGeralOnly={canProcessGeralOnly}
           isProcessing={isProcessing}
+          analysisMode={analysisMode}
+          onAnalysisModeChange={setAnalysisMode}
           mappingModalOpen={mappingModalOpen}
           mappingModalFile={mappingModalFile}
           onOpenMappingModal={(key) => {
@@ -65,6 +75,13 @@ function App() {
         <AuditPage
           audit={processingResult.audit}
           onGoToDashboard={() => setCurrentView('dashboard')}
+          onGoToUpload={resetAll}
+        />
+      )}
+
+      {currentView === 'geral-dashboard' && geralOnlyResult && (
+        <GeralDashboardPage
+          result={geralOnlyResult}
           onGoToUpload={resetAll}
         />
       )}

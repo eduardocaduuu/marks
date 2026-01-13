@@ -8,6 +8,7 @@ import {
   BRAND_NAMES,
   ColumnMapping,
   ProcessingResult,
+  GeralOnlyResult,
   RawRow,
   ResellerAnalysis,
   SectorSummary,
@@ -339,6 +340,38 @@ export function processData(
     audit,
     success: true,
     errors
+  };
+}
+
+/**
+ * Processa apenas a planilha Geral para listar revendedores ativos
+ */
+export function processGeralOnly(
+  geralData: RawRow[],
+  geralMapping: ColumnMapping,
+  ciclo: string
+): GeralOnlyResult {
+  const activeResellers = extractActiveResellers(geralData, geralMapping, ciclo);
+
+  // Converter Map para array
+  const resellers = Array.from(activeResellers.values());
+
+  // Agrupar por setor
+  const sectorMap = new Map<string, number>();
+  for (const reseller of resellers) {
+    const setor = reseller.setor || 'Sem Setor';
+    sectorMap.set(setor, (sectorMap.get(setor) || 0) + 1);
+  }
+
+  const sectorSummaries = Array.from(sectorMap.entries())
+    .map(([setor, total]) => ({ setor, total }))
+    .sort((a, b) => a.setor.localeCompare(b.setor));
+
+  return {
+    resellers,
+    sectorSummaries,
+    cicloSelecionado: ciclo,
+    totalAtivos: resellers.length
   };
 }
 

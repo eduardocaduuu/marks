@@ -8,11 +8,12 @@ import {
   FileUploadState,
   BrandName,
   ProcessingResult,
+  GeralOnlyResult,
   ColumnMapping
 } from '../types';
 import { parseFile } from '../lib/fileParser';
 import { autoMapColumns } from '../lib/normalize';
-import { processData, extractCycles } from '../lib/aggregate';
+import { processData, processGeralOnly, extractCycles } from '../lib/aggregate';
 
 type FileKey = 'geral' | BrandName;
 
@@ -39,8 +40,10 @@ export function useAppState() {
   const [cycles, setCycles] = useState<string[]>([]);
   const [selectedCycle, setSelectedCycle] = useState<string>('');
   const [processingResult, setProcessingResult] = useState<ProcessingResult | null>(null);
+  const [geralOnlyResult, setGeralOnlyResult] = useState<GeralOnlyResult | null>(null);
+  const [analysisMode, setAnalysisMode] = useState<'full' | 'geral-only'>('full');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentView, setCurrentView] = useState<'upload' | 'dashboard' | 'audit'>('upload');
+  const [currentView, setCurrentView] = useState<'upload' | 'dashboard' | 'audit' | 'geral-dashboard'>('upload');
   const [mappingModalOpen, setMappingModalOpen] = useState(false);
   const [mappingModalFile, setMappingModalFile] = useState<FileKey | null>(null);
 
@@ -173,6 +176,36 @@ export function useAppState() {
     }
   }, [uploadedFiles, selectedCycle]);
 
+  const processGeralOnlyData = useCallback(() => {
+    if (!uploadedFiles.geral.loaded || !uploadedFiles.geral.mapping) {
+      return { success: false, error: 'Planilha Geral não carregada ou mapeamento incompleto' };
+    }
+
+    if (!selectedCycle) {
+      return { success: false, error: 'Selecione um ciclo' };
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const result = processGeralOnly(
+        uploadedFiles.geral.data,
+        uploadedFiles.geral.mapping,
+        selectedCycle
+      );
+
+      setGeralOnlyResult(result);
+      setCurrentView('geral-dashboard');
+      setIsProcessing(false);
+
+      return { success: true };
+    } catch (error) {
+      setIsProcessing(false);
+      console.error('Erro no processamento:', error);
+      return { success: false, error: 'Erro ao processar dados' };
+    }
+  }, [uploadedFiles, selectedCycle]);
+
   const clearFile = useCallback((key: FileKey) => {
     setUploadedFiles(prev => ({
       ...prev,
@@ -190,6 +223,8 @@ export function useAppState() {
     setCycles([]);
     setSelectedCycle('');
     setProcessingResult(null);
+    setGeralOnlyResult(null);
+    setAnalysisMode('full');
     setCurrentView('upload');
   }, []);
 
@@ -215,12 +250,21 @@ export function useAppState() {
     allMappingsOk &&
     selectedCycle !== '';
 
+  const canProcessGeralOnly =
+    uploadedFiles.geral.loaded &&
+    uploadedFiles.geral.mapping !== null &&
+    !uploadedFiles.geral.mappingError &&
+    selectedCycle !== '';
+
   return {
     uploadedFiles,
     cycles,
     selectedCycle,
     setSelectedCycle,
     processingResult,
+    geralOnlyResult,
+    analysisMode,
+    setAnalysisMode,
     isProcessing,
     currentView,
     setCurrentView,
@@ -231,9 +275,11 @@ export function useAppState() {
     handleFileUpload,
     handleManualMapping,
     processAllData,
+    processGeralOnlyData,
     clearFile,
     resetAll,
     canProcess,
+    canProcessGeralOnly,
     allBrandsLoaded,
     allMappingsOk
   };

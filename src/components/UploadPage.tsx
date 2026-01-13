@@ -11,8 +11,12 @@ interface UploadPageProps {
   onFileUpload: (key: 'geral' | BrandName, file: File) => void;
   onClearFile: (key: 'geral' | BrandName) => void;
   onProcess: () => { success: boolean; error?: string };
+  onProcessGeralOnly: () => { success: boolean; error?: string };
   canProcess: boolean;
+  canProcessGeralOnly: boolean;
   isProcessing: boolean;
+  analysisMode: 'full' | 'geral-only';
+  onAnalysisModeChange: (mode: 'full' | 'geral-only') => void;
   mappingModalOpen: boolean;
   mappingModalFile: 'geral' | BrandName | null;
   onOpenMappingModal: (key: 'geral' | BrandName) => void;
@@ -28,8 +32,12 @@ export function UploadPage({
   onFileUpload,
   onClearFile,
   onProcess,
+  onProcessGeralOnly,
   canProcess,
+  canProcessGeralOnly,
   isProcessing,
+  analysisMode,
+  onAnalysisModeChange,
   mappingModalOpen,
   mappingModalFile,
   onOpenMappingModal,
@@ -37,7 +45,7 @@ export function UploadPage({
   onSaveMapping
 }: UploadPageProps) {
   const handleProcess = () => {
-    const result = onProcess();
+    const result = analysisMode === 'full' ? onProcess() : onProcessGeralOnly();
     if (!result.success && result.error) {
       alert(result.error);
     }
@@ -113,28 +121,55 @@ export function UploadPage({
         </div>
       )}
 
-      <div className="upload-section">
-        <h2>3. Planilhas de Marcas</h2>
-        <p className="section-description">
-          Faça upload das 5 planilhas de marcas. Apenas linhas com Tipo="Venda" serão consideradas.
-        </p>
-
-        <div className="upload-grid">
-          {brandKeys.map(brand => (
-            <FileUploadCard
-              key={brand}
-              title={brand}
-              fileState={uploadedFiles[brand]}
-              onUpload={(file) => onFileUpload(brand, file)}
-              onClear={() => onClearFile(brand)}
-              onFixMapping={() => onOpenMappingModal(brand)}
-              required
-            />
-          ))}
+      {uploadedFiles.geral.loaded && selectedCycle && (
+        <div className="mode-section">
+          <h2>3. Tipo de Analise</h2>
+          <p className="section-description">
+            Escolha o tipo de analise que deseja realizar.
+          </p>
+          <div className="mode-selector">
+            <button
+              className={`mode-btn ${analysisMode === 'geral-only' ? 'active' : ''}`}
+              onClick={() => onAnalysisModeChange('geral-only')}
+            >
+              <span className="mode-title">Apenas Ativos</span>
+              <span className="mode-desc">Lista revendedores ativos no ciclo</span>
+            </button>
+            <button
+              className={`mode-btn ${analysisMode === 'full' ? 'active' : ''}`}
+              onClick={() => onAnalysisModeChange('full')}
+            >
+              <span className="mode-title">Analise Multimarca</span>
+              <span className="mode-desc">Cruza dados com planilhas de marca</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      {missingFiles.length > 0 && (
+      {analysisMode === 'full' && (
+        <div className="upload-section">
+          <h2>4. Planilhas de Marcas</h2>
+          <p className="section-description">
+            Faça upload das 5 planilhas de marcas. Apenas linhas com Tipo="Venda" serão consideradas.
+          </p>
+
+          <div className="upload-grid">
+            {brandKeys.map(brand => (
+              <FileUploadCard
+                key={brand}
+                title={brand}
+                fileState={uploadedFiles[brand]}
+                onUpload={(file) => onFileUpload(brand, file)}
+                onClear={() => onClearFile(brand)}
+                onFixMapping={() => onOpenMappingModal(brand)}
+                required
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {analysisMode === 'full' && missingFiles.length > 0 && (
         <div className="warning-box">
           <h4>Arquivos faltando:</h4>
           <p>{missingFiles.join(', ')}</p>
@@ -152,12 +187,12 @@ export function UploadPage({
         <button
           className="btn-process"
           onClick={handleProcess}
-          disabled={!canProcess || isProcessing}
+          disabled={analysisMode === 'full' ? (!canProcess || isProcessing) : (!canProcessGeralOnly || isProcessing)}
         >
-          {isProcessing ? 'Processando...' : 'Processar Dados'}
+          {isProcessing ? 'Processando...' : analysisMode === 'full' ? 'Processar Dados' : 'Analisar Ativos'}
         </button>
 
-        {!canProcess && (
+        {analysisMode === 'full' && !canProcess && (
           <p className="help-text">
             {!uploadedFiles.geral.loaded
               ? 'Faça upload da planilha Geral para começar'
@@ -168,6 +203,18 @@ export function UploadPage({
               : mappingErrors.length > 0
               ? 'Corrija os erros de mapeamento'
               : 'Carregue todos os arquivos necessários'}
+          </p>
+        )}
+
+        {analysisMode === 'geral-only' && !canProcessGeralOnly && (
+          <p className="help-text">
+            {!uploadedFiles.geral.loaded
+              ? 'Faça upload da planilha Geral para começar'
+              : !selectedCycle
+              ? 'Selecione um ciclo'
+              : uploadedFiles.geral.mappingError
+              ? 'Corrija o mapeamento da planilha Geral'
+              : 'Carregue a planilha Geral'}
           </p>
         )}
       </div>
